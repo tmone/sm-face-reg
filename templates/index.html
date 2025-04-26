@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhận diện khuôn mặt - Pinokio App</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Nhận Diện Khuôn Mặt & Phân Tích Góc Xoay</h1>
+            <p class="subtitle">Powered by MediaPipe & Pinokio</p>
+        </header>
+
+        <main>
+            <!-- Form đăng ký thông tin người dùng -->
+            <div id="user-info-container" class="user-info-container">
+                <div class="panel-section">
+                    <h2><i class="fas fa-user"></i> Thông tin người dùng</h2>
+                    <form id="user-info-form">
+                        <div class="form-group">
+                            <label for="fullname">Họ và tên <span class="required">*</span></label>
+                            <input type="text" id="fullname" name="fullname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="employee-id">Mã nhân viên <span class="required">*</span></label>
+                            <input type="text" id="employee-id" name="employee-id" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email <span class="required">*</span></label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="department">Phòng ban <span class="required">*</span></label>
+                            <select id="department" name="department" required>
+                                <option value="">-- Chọn phòng ban --</option>
+                                <option value="StepMedia">StepMedia</option>
+                                <option value="MediaStep">MediaStep</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn primary">
+                            <i class="fas fa-check-circle"></i> Xác nhận
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="app-container" class="hidden">
+                <div class="video-container">
+                    <div class="video-wrapper">
+                        <video id="webcam" autoplay muted playsinline></video>
+                        <canvas id="overlay"></canvas>
+                        <div id="loading-indicator" class="hidden">
+                            <div class="spinner"></div>
+                            <p>Đang xử lý...</p>
+                        </div>
+                        <div id="no-camera" class="hidden">
+                            <i class="fas fa-video-slash"></i>
+                            <p>Không thể kết nối với camera</p>
+                        </div>
+                    </div>
+                    <div class="controls">
+                        <button id="start-btn" class="btn primary">
+                            <i class="fas fa-play"></i> Bắt đầu
+                        </button>
+                        <button id="stop-btn" class="btn danger" disabled>
+                            <i class="fas fa-stop"></i> Dừng
+                        </button>
+                        <button id="screenshot-btn" class="btn secondary" disabled>
+                            <i class="fas fa-camera"></i> Chụp ảnh
+                        </button>
+                    </div>
+                    
+                    <div class="auto-capture-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="auto-capture-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span>Tự động chụp khi xoay đầu</span>
+                        <div class="auto-capture-status">
+                            <span class="status-label">Trạng thái:</span>
+                            <div class="status-indicators">
+                                <span class="direction-indicator" data-direction="straight">Thẳng</span>
+                                <span class="direction-indicator" data-direction="left">Trái</span>
+                                <span class="direction-indicator" data-direction="right">Phải</span>
+                                <span class="direction-indicator" data-direction="up">Trên</span>
+                                <span class="direction-indicator" data-direction="down">Dưới</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-panel">
+                    <div class="panel-section">
+                        <h2><i class="fas fa-check-circle"></i> Trạng thái</h2>
+                        <div class="status-details">
+                            <p>Nhận diện: <span id="detection-status">Chưa bắt đầu</span></p>
+                            <p>Khuôn mặt thật: <span id="real-face-score">--</span></p>
+                            <div class="progress-bar">
+                                <div id="real-face-progress" style="width: 0%"></div>
+                            </div>
+                            <div class="sending-indicator-container">
+                                <span id="sending-indicator" style="display: none;">
+                                    <i class="fas fa-sync fa-spin"></i> Đang gửi đến server (1 lần/giây)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h2><i class="fas fa-sync"></i> Góc Xoay Khuôn Mặt</h2>
+                        <div class="rotation-details">
+                            <div class="rotation-item">
+                                <div class="rotation-label">
+                                    <i class="fas fa-arrows-alt-h"></i>
+                                    <span>Nghiêng (Roll):</span>
+                                </div>
+                                <div class="rotation-value">
+                                    <span id="roll-value">0°</span>
+                                    <span id="roll-text" class="direction-text">Thẳng</span>
+                                </div>
+                            </div>
+                            <div class="rotation-item">
+                                <div class="rotation-label">
+                                    <i class="fas fa-arrows-alt-v"></i>
+                                    <span>Ngẩng/Cúi (Pitch):</span>
+                                </div>
+                                <div class="rotation-value">
+                                    <span id="pitch-value">0°</span>
+                                    <span id="pitch-text" class="direction-text">Thẳng</span>
+                                </div>
+                            </div>
+                            <div class="rotation-item">
+                                <div class="rotation-label">
+                                    <i class="fas fa-sync-alt"></i>
+                                    <span>Quay (Yaw):</span>
+                                </div>
+                                <div class="rotation-value">
+                                    <span id="yaw-value">0°</span>
+                                    <span id="yaw-text" class="direction-text">Thẳng</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h2><i class="fas fa-chart-line"></i> Hiệu suất</h2>
+                        <div class="performance-details">
+                            <p>Tốc độ xử lý: <span id="processing-time">0</span> ms</p>
+                            <p>Tần suất gửi: <span id="fps">0</span> FPS</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Phần hiển thị danh sách ảnh đã chụp -->
+        <div class="captured-images-section">
+            <h2><i class="fas fa-images"></i> Danh sách ảnh đã chụp</h2>
+            <div id="no-images-message">Chưa có ảnh nào được chụp</div>
+            <div id="captured-images-container">
+                <!-- Danh sách ảnh sẽ được thêm vào đây bằng JavaScript -->
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2025 - Ứng dụng nhận diện khuôn mặt qua mạng</p>
+        </footer>
+    </div>
+
+    <!-- Modal xem trước ảnh -->
+    <div id="image-preview-modal" class="image-preview-modal">
+        <div class="image-preview-content">
+            <span class="image-preview-close">&times;</span>
+            <img id="preview-image" src="">
+            <div class="image-preview-caption" id="preview-caption"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
